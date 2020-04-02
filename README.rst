@@ -20,10 +20,12 @@ Usage
 
 .. code::
 
-    python twitter.py
+    python twitter.py USERNAME
+    python twitter.py elonmusk
+    python twitter.py JeffBezoz
+    ...
 
 TODO
 ----
 
-* Store twitter activity as Excel files
-    * Requested format: dd.mm.yyyy | number
+* Store twitter activity as Excel files (requested format: | dd.mm.yyyy | number)
