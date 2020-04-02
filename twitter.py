@@ -8,24 +8,24 @@ import argparse
 import matplotlib.pyplot as plt
 import twitter_scraper as tw
 
-NUM_PAGES = 25
-
 
 def cli():
     parser = argparse.ArgumentParser(description='Twitter scraper')
     parser.add_argument('username', metavar='NAME', type=str, help='target twitter profile')
+    parser.add_argument('--pages', '-p', metavar='PAGES', type=int, help='number of pages to fetch', default=20)
     args = parser.parse_args()
 
     username = args.username
-    plot_tweet_activity(username)
+    pages = args.pages
+    plot_tweet_activity(username, pages)
 
 
-def plot_tweet_activity(username):
+def plot_tweet_activity(username, pages):
     profile = tw.Profile(username)
     print(f"Target: {username} ({profile.name}) | {profile.followers_count} followers\n")
 
-    print("Downloading tweets...")
-    tweets = list(tw.get_tweets(username, NUM_PAGES))
+    print(f"Downloading tweets ({pages} pages)...")
+    tweets = list(tw.get_tweets(username, pages))
     print(f"Downloaded {len(tweets)} tweets...\n")
 
     print("Counting tweets per day...")
@@ -38,9 +38,9 @@ def plot_tweet_activity(username):
     dates = list(tweets_per_day.keys())
     num_tweets = list(tweets_per_day.values())
 
-    plt.plot_date(dates, num_tweets, '.')
+    plt.plot_date(dates, num_tweets, '.', color='black')
     plt.gcf().autofmt_xdate()
-    plt.title("Tweet activity")
+    plt.title(f"Tweet activity @{username} (total = {len(tweets)})")
     plt.xlabel("Time")
     plt.ylabel("Number of tweets")
     plt.show()

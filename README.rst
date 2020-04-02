@@ -25,6 +25,17 @@ Usage
     python twitter.py JeffBezoz
     ...
 
+Optionally you can define the number of pages to download.
+
+.. code::
+
+    python twitter.py elonmusk -p 10
+    OR
+    python twitter.py elonmusk --pages 25
+    ...
+
+To retrieve older/more tweets, increase the number of pages.
+
 TODO
 ----
 
