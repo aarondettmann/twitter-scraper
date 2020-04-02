@@ -1,0 +1,2 @@
+matplotlib==3.2.1
+twitter-scraper==0.4.1
