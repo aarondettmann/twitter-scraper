@@ -4,10 +4,26 @@ Twitter scraper
 Requirements
 ------------
 
-* matplotlib (pip install matplolib)
-* twitter-scraper (pip install twitter-scraper)
+Run
+
+.. code::
+
+    pip install -r requirements.txt
+
+This installs the following libraries:
+
+* matplotlib
+* twitter-scraper
 
 Usage
 -----
 
-python twitter.py
+.. code::
+
+    python twitter.py
+
+TODO
+----
+
+* Store twitter activity as Excel files
+    * Requested format: dd.mm.yyyy | number
