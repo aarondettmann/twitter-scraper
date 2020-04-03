@@ -47,6 +47,7 @@ def cli():
     sub = subparsers.add_parser('down', help='download target twitter feed')
     sub.add_argument('usernames', metavar='NAMES', nargs='+', type=str, help='target twitter profile')
     sub.add_argument('--pages', '-p', metavar='PAGES', type=int, help='number of pages to fetch', default=20)
+    sub.add_argument('--no-excel', action='store_true', help='do not convert data to exel file')
 
     # ----- Mode plot -----
     sub = subparsers.add_parser('plot', help='plot twitter feed data')
@@ -61,7 +62,11 @@ def cli():
 
     if args.exec_mode == 'down':
         for username in args.usernames:
-            download_history(username, args.pages)
+            json_file = download_history(username, args.pages)
+            excel_file = json_file.replace(".json", ".xlsx")
+            if not args.no_excel:
+                twitter_data = load_twitter_data(json_file)
+                convert_to_excel(twitter_data, excel_file)
     elif args.exec_mode == 'plot':
         filename = os.path.abspath(args.filename)
         twitter_data = load_twitter_data(filename)
@@ -132,9 +137,10 @@ def download_history(username, pages):
         "profile": profile.to_dict(),
         "history": tweets,
     }
-    logging.info(f"Saving data: {file_user_data}...")
+    logging.info(f"Saving data: {file_user_data}")
     with open(file_user_data, 'w') as fp:
         dump_pretty_json(data, fp)
+    return file_user_data
 
 
 def plot_tweet_activity(twitter_data):
@@ -229,7 +235,7 @@ def convert_to_excel(twitter_data, excel_file):
         sheet3.cell(row=i, column=1, value=header)
         sheet3.cell(row=i, column=2, value=profile[header])
 
-    logging.info(f"Saving data: {excel_file}...")
+    logging.info(f"Saving data: {excel_file}")
     workbook.save(excel_file)
 
 
