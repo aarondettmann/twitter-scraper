@@ -39,4 +39,5 @@ To retrieve older/more tweets, increase the number of pages.
 TODO
 ----
 
-* Store twitter activity as Excel files (requested format: | dd.mm.yyyy | number)
+* Store tweet history per username *persistently* (JSON/SQL/...?)
+    * Convert data to Excel files (requested format: | dd.mm.yyyy | number)
