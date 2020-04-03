@@ -4,7 +4,7 @@ Twitter scraper
 Requirements
 ------------
 
-To run the script, you need *Python* (version 3.6.0 or higher). A few additional libraries are required. These can be easily installed by running the following command in a terminal:
+To run the script, you need *Python* (version 3.8.0 or higher). A few additional libraries are required. These can be easily installed by running the following command in a terminal:
 
 .. code::
 
@@ -36,5 +36,5 @@ Usage
 .. code::
 
     python twitter.py xl data/elonmusk_2020-04-01_1030/data.json
-    
+
 This will generate an Excel file ``data/elonmusk_2020-04-01_1030/data.xlsx``.
