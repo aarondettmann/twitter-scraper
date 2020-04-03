@@ -5,7 +5,7 @@
 Download Twitter data for a certain user account
 """
 
-from collections import Counter, defaultdict
+from collections import Counter
 from functools import partial
 from pathlib import Path
 import argparse
