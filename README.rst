@@ -25,13 +25,13 @@ Usage
 
     python twitter.py down elonmusk -p 5
 
-You can visualize data using the **plot** mode. As a second argument, specify the JSON file with the twitter data you downloaded in the previous step. Example
+**Plotting** You can visualize data using the **plot** mode. As a second argument, specify the JSON file with the twitter data you downloaded in the previous step. Example
 
 .. code::
 
     python twitter.py plot data/elonmusk_2020-04-01_1030/data.json
 
-When downloading Twitter data, it is stored in a JSON format. The data may be converted to an Excel file as shown in the example below.
+**Excel files** When downloading Twitter data, it is stored in a JSON format. The data may be converted to an Excel file as shown in the example below.
 
 .. code::
 
