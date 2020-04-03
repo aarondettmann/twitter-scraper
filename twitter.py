@@ -161,7 +161,7 @@ def plot_tweet_activity(twitter_data):
     Visualize daily tweet activity
 
     Args:
-        :twitter_data: (dict) twitter data
+        :twitter_data: (dict) dictionary with twitter data
     """
 
     tweets = twitter_data['history']
@@ -193,7 +193,8 @@ def get_tweets_per_day(twitter_data):
         :tweets_per_day: (dict) dictionary with day (datetime object) and tweet count
     """
 
-    tweets = twitter_data['history']
+    tweets = get_tweets(twitter_data)
+
     tweets_per_day = Counter()
     for tweet in tweets:
         time = datetime.datetime.fromisoformat(tweet['time'])
@@ -201,9 +202,27 @@ def get_tweets_per_day(twitter_data):
     return tweets_per_day
 
 
+def get_tweets(twitter_data):
+    """
+    Return tweets from twitter data or return error
+
+    Args:
+        :twitter_data: (dict) dictionary with twitter data
+
+    Returns:
+        :tweets: (list) Tweets
+    """
+
+    tweets = twitter_data.get('history', None)
+    if tweets is None:
+        logging.error("Failed to retrieve tweets... Exit.")
+        sys.exit(1)
+    return tweets
+
+
 def convert_to_excel(twitter_data, excel_file):
     """
-    Convert a twitter data dict to excel file
+    Convert a twitter data dictionary to a excel file
 
     Args:
         :twitter_data: (dict) dictionary with twitter data
@@ -211,12 +230,13 @@ def convert_to_excel(twitter_data, excel_file):
     """
 
     logging.info("Creating excel file...")
+    tweets = get_tweets(twitter_data)
+
     workbook = xl.Workbook()
 
     # ----- Tweet data -----
     sheet1 = workbook.active
     sheet1.title = "Tweet raw data"
-    tweets = twitter_data['history']
 
     headers = ["Time", "isRetweet", "replies", "likes", "hashtags", "text"]
     for i, header in enumerate(headers, start=1):
