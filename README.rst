@@ -14,32 +14,27 @@ This installs the following libraries:
 
 * matplotlib
 * twitter-scraper
+* openpyxl
 
 Usage
 -----
 
-.. code::
-
-    python twitter.py USERNAME
-    python twitter.py elonmusk
-    python twitter.py JeffBezoz
-    ...
-
-Optionally you can define the number of pages to download.
+Download Twitter data for user USERNAME. Use ``-p NUMBER`` to specify how many page you want to download. To retrieve older/more tweets, increase the number of pages. The ``-p`` flag is optional.
 
 .. code::
 
-    python twitter.py elonmusk -p 10
-    OR
-    python twitter.py elonmusk --pages 25
-    ...
+    python twitter.py down USERNAME -p 5
 
-To retrieve older/more tweets, increase the number of pages.
+You can visualize date using the **plot** mode. As a second argument, specify the JSON file with the twitter data downloaded in the previous step.
 
-TODO
-----
+.. code::
 
-* Store tweet history per username *persistently* (JSON/SQL/...?)
-    * Store data in a separate folder (``data``). For each download create separate subdir ``username_yyyy-mm-dd_HHMM`` where the timestamp indicated time of download (local time).
-    * Convert data to Excel files (requested format: | dd.mm.yyyy | number)
-* Use ``logging`` module instead of ``print()`` statements
+    python twitter.py plot data/USERNAME_***/data.json
+
+When downloading Twitter data, it is stored in a JSON format. The data may be converted to an Excel file as shown below:
+
+.. code::
+
+    python twitter.py xl data/USERNAME_***/data.json
+    
+This will generate an Excel file ```data/USERNAME_***/data.xlsx``.
