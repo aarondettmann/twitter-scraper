@@ -41,3 +41,4 @@ TODO
 
 * Store tweet history per username *persistently* (JSON/SQL/...?)
     * Convert data to Excel files (requested format: | dd.mm.yyyy | number)
+* Use `logging` module instead of `print()` statements
