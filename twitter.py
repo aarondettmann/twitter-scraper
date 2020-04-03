@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from collections import Counter
+"""
+Download Twitter data for a certain user account
+"""
+
+from collections import Counter, defaultdict
 from functools import partial
 from pathlib import Path
 import argparse
 import datetime
 import json
 import logging
-import openpyxl as xl
 import os
 import sys
 
 import matplotlib.pyplot as plt
+import openpyxl as xl
 import twitter_scraper as tw
 
 __prog_name__ = 'TwitterScraper'
@@ -63,7 +67,8 @@ def cli():
     if args.exec_mode == 'down':
         for username in args.usernames:
             json_file = download_history(username, args.pages)
-            excel_file = json_file.replace(".json", ".xlsx")
+            excel_file = json_file.replace('.json', '.xlsx')
+            # Convert data to Excel spreadsheet by default
             if not args.no_excel:
                 twitter_data = load_twitter_data(json_file)
                 convert_to_excel(twitter_data, excel_file)
@@ -73,7 +78,7 @@ def cli():
         plot_tweet_activity(twitter_data)
     elif args.exec_mode == 'xl':
         json_file = os.path.abspath(args.filename)
-        excel_file = json_file.replace(".json", ".xlsx")
+        excel_file = json_file.replace('.json', '.xlsx')
 
         twitter_data = load_twitter_data(json_file)
         convert_to_excel(twitter_data, excel_file)
@@ -120,8 +125,15 @@ def download_history(username, pages):
         :pages: (int) number of pages to download
     """
 
-    profile = tw.Profile(username)
-    logging.info(f"Target: {username} ({profile.name}) | {profile.followers_count:,} followers")
+    try:
+        profile = tw.Profile(username)
+        logging.info(f"Target: {username} ({profile.name}) | {profile.followers_count:,} followers")
+    except:
+        if username.startswith('#'):
+            logging.info(f"Interpreting {username!r} as a hashtag...")
+        else:
+            logging.error(f"Failed to fetch username data for {username!r}")
+        profile = None
 
     logging.info(f"Downloading tweets ({pages} pages)...")
     tweets = list(tw.get_tweets(username, pages))
@@ -133,8 +145,9 @@ def download_history(username, pages):
     mkdir(dir_user_data)
     file_user_data = os.path.join(dir_user_data, "data.json")
 
+    profile_dict = profile.to_dict() if profile is not None else {}
     data = {
-        "profile": profile.to_dict(),
+        "profile": profile_dict,
         "history": tweets,
     }
     logging.info(f"Saving data: {file_user_data}")
@@ -153,7 +166,7 @@ def plot_tweet_activity(twitter_data):
 
     tweets = twitter_data['history']
     profile = twitter_data['profile']
-    username = profile['username']
+    username = profile.get('username', 'NONE')
 
     tweets_per_day = get_tweets_per_day(twitter_data)
 
@@ -233,7 +246,7 @@ def convert_to_excel(twitter_data, excel_file):
     headers = ["name", "username", "likes_count", "tweets_count", "followers_count", "following_count"]
     for i, header in enumerate(headers, start=1):
         sheet3.cell(row=i, column=1, value=header)
-        sheet3.cell(row=i, column=2, value=profile[header])
+        sheet3.cell(row=i, column=2, value=profile.get(header, 'NONE'))
 
     logging.info(f"Saving data: {excel_file}")
     workbook.save(excel_file)
