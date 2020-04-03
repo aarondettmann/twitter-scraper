@@ -9,6 +9,7 @@ import argparse
 import json
 import logging
 import os
+import sys
 
 import matplotlib.pyplot as plt
 import twitter_scraper as tw
@@ -45,29 +46,51 @@ def cli():
 
     # ----- Mode plot -----
     sub = subparsers.add_parser('plot', help='plot twitter feed data')
-    sub.add_argument("data", metavar='FOLDER', help="data to visualize", type=str)
+    sub.add_argument("filename", metavar='FILE', help="data to visualize", type=str)
     sub.add_argument("--show", "-s", metavar='PLOTNAME', help="available plots: 'activity'", type=str, default='activity')
 
     args = parser.parse_args()
 
     if args.exec_mode == 'down':
-        username = args.username
-        pages = args.pages
-
-        download_history(username, pages)
-        # plot_tweet_activity(username, pages)
-
+        download_history(args.username, args.pages)
     elif args.exec_mode == 'plot':
-        pass
+        filename = os.path.abspath(args.filename)
+        twitter_data = load_twitter_data(filename)
+        plot_tweet_activity(twitter_data)
+    else:
+        parser.print_help()
 
 
-def mkdir(dir_path):
-    Path(dir_path).mkdir(parents=True, exist_ok=True)
+def mkdir(dirname):
+    """
+    Make a directory
+
+    Args:
+        :dirname: (str) path name
+    """
+
+    Path(dirname).mkdir(parents=True, exist_ok=True)
+
+
+def load_twitter_data(filename):
+    """
+    Load twitter data from a file
+
+    Args:
+        :filename: (str) path of the file to load
+
+    Returns:
+        :twitter_data: (dict) dictionary with twitter data
+    """
+
+    with open(str(filename), "r") as fp:
+        twitter_data = json.load(fp)
+    return twitter_data
 
 
 def download_history(username, pages):
     """
-    Download tweets. Data is stored on disk.
+    Download tweets and save data on disk
 
     Args:
         :username: (str) target twitter account
@@ -75,7 +98,7 @@ def download_history(username, pages):
     """
 
     profile = tw.Profile(username)
-    logging.info(f"Target: {username} ({profile.name}) | {profile.followers_count} followers")
+    logging.info(f"Target: {username} ({profile.name}) | {profile.followers_count:,} followers")
 
     logging.info(f"Downloading tweets ({pages} pages)...")
     tweets = list(tw.get_tweets(username, pages))
@@ -85,27 +108,35 @@ def download_history(username, pages):
     now = datetime.now()
     dir_user_data = os.path.join(DIR_DATA, f"{username}_{now.strftime('%F_%H%M')}")
     mkdir(dir_user_data)
-    file_user_data = os.path.join(dir_user_data, "tweets.json")
+    file_user_data = os.path.join(dir_user_data, "data.json")
 
+    data = {
+        "profile": profile.to_dict(),
+        "history": tweets,
+    }
+    logging.info(f"Saving data: {file_user_data}...")
     with open(file_user_data, 'w') as fp:
-        dump_pretty_json({"history": tweets}, fp)
+        dump_pretty_json(data, fp)
 
 
-def plot_tweet_activity(username, pages):
-    profile = tw.Profile(username)
-    logging.info(f"Target: {username} ({profile.name}) | {profile.followers_count} followers")
+def plot_tweet_activity(twitter_data):
+    """
+    Visualize daily tweet activity
 
-    logging.info(f"Downloading tweets ({pages} pages)...")
-    tweets = list(tw.get_tweets(username, pages))
-    logging.info(f"Downloaded {len(tweets)} tweets...")
+    Args:
+        :twitter_data: (dict) twitter data
+    """
 
-    logging.info("Counting tweets per day...")
+    tweets = twitter_data['history']
+    profile = twitter_data['profile']
+    username = profile['username']
+
     tweets_per_day = Counter()
     for tweet in tweets:
-        time = tweet['time']
+        time = datetime.fromisoformat(tweet['time'])
         tweets_per_day[datetime(time.year, time.month, time.day)] += 1
 
-    logging.info(f"Plotting tweet activity")
+    logging.info(f"Plotting tweet activity for {username}...")
     dates = list(tweets_per_day.keys())
     num_tweets = list(tweets_per_day.values())
 
@@ -118,4 +149,8 @@ def plot_tweet_activity(username, pages):
 
 
 if __name__ == '__main__':
-    cli()
+    try:
+        cli()
+    except KeyboardInterrupt:
+        logging.error(f"Exit...")
+        sys.exit(1)
