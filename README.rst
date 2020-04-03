@@ -4,7 +4,7 @@ Twitter scraper
 Requirements
 ------------
 
-Run
+To run the script, you need *Python* (version 3.6.0 or higher). A few additional libraries are required. These can be easily installed by running the following command in a terminal:
 
 .. code::
 
@@ -12,29 +12,29 @@ Run
 
 This installs the following libraries:
 
-* matplotlib
-* twitter-scraper
-* openpyxl
+* *matplotlib* (for plotting)
+* *twitter-scraper* (for access to the Twitter API)
+* *openpyxl* (for writing to Excel files)
 
 Usage
 -----
 
-Download Twitter data for user USERNAME. Use ``-p NUMBER`` to specify how many page you want to download. To retrieve older/more tweets, increase the number of pages. The ``-p`` flag is optional.
+**Download Twitter data** Use the ``down`` mode in order to download twitter data. After the ``down`` keyword, you need to specify the ``USERNAME`` (Twitter account name). Use the optional argument ``-p NUMBER`` to specify how many page you want to download. To retrieve older/more tweets, increase the number of pages. Example:
 
 .. code::
 
-    python twitter.py down USERNAME -p 5
+    python twitter.py down elonmusk -p 5
 
-You can visualize date using the **plot** mode. As a second argument, specify the JSON file with the twitter data downloaded in the previous step.
-
-.. code::
-
-    python twitter.py plot data/USERNAME_***/data.json
-
-When downloading Twitter data, it is stored in a JSON format. The data may be converted to an Excel file as shown below:
+You can visualize data using the **plot** mode. As a second argument, specify the JSON file with the twitter data you downloaded in the previous step. Example
 
 .. code::
 
-    python twitter.py xl data/USERNAME_***/data.json
+    python twitter.py plot data/elonmusk_2020-04-01_1030/data.json
+
+When downloading Twitter data, it is stored in a JSON format. The data may be converted to an Excel file as shown in the example below.
+
+.. code::
+
+    python twitter.py xl data/elonmusk_2020-04-01_1030/data.json
     
-This will generate an Excel file ```data/USERNAME_***/data.xlsx``.
+This will generate an Excel file ``data/elonmusk_2020-04-01_1030/data.xlsx``.
