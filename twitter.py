@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 from collections import Counter
-from datetime import datetime
 from functools import partial
 from pathlib import Path
 import argparse
+import datetime
 import json
 import logging
 import openpyxl as xl
@@ -25,12 +25,15 @@ LOG_DATE_FMT = '%F %H:%M:%S'
 logging.basicConfig(level=logging.INFO, format=LOG_FMT, datefmt=LOG_DATE_FMT)
 
 
+# See https://stackoverflow.com/questions/12122007/python-json-encoder-to-support-datetime
 class DateTimeEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, datetime):
-            return o.isoformat()
+    def default(self, obj):
+        if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
+            return obj.isoformat()
+        elif isinstance(obj, datetime.timedelta):
+            return (datetime.datetime.min + obj).time().isoformat()
 
-        return json.JSONEncoder.default(self, o)
+        return super(DateTimeEncoder, self).default(obj)
 
 
 dump_pretty_json = partial(json.dump, cls=DateTimeEncoder, indent=4, separators=(',', ': '))
@@ -95,8 +98,11 @@ def load_twitter_data(filename):
         :twitter_data: (dict) dictionary with twitter data
     """
 
+    logging.info(f"Importing twitter data from file: {filename}")
     with open(str(filename), "r") as fp:
         twitter_data = json.load(fp)
+
+    logging.info(f"Found {len(twitter_data['history'])} tweets in imported file...")
     return twitter_data
 
 
@@ -117,7 +123,7 @@ def download_history(username, pages):
     logging.info(f"Downloaded {len(tweets)} tweets...")
 
     mkdir(DIR_DATA)
-    now = datetime.now()
+    now = datetime.datetime.now()
     dir_user_data = os.path.join(DIR_DATA, f"{username}_{now.strftime('%F_%H%M')}")
     mkdir(dir_user_data)
     file_user_data = os.path.join(dir_user_data, "data.json")
@@ -171,8 +177,8 @@ def get_tweets_per_day(twitter_data):
     tweets = twitter_data['history']
     tweets_per_day = Counter()
     for tweet in tweets:
-        time = datetime.fromisoformat(tweet['time'])
-        tweets_per_day[datetime(time.year, time.month, time.day)] += 1
+        time = datetime.datetime.fromisoformat(tweet['time'])
+        tweets_per_day[datetime.datetime(time.year, time.month, time.day)] += 1
     return tweets_per_day
 
 
