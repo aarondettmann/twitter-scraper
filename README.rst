@@ -16,8 +16,8 @@ This installs the following libraries:
 * *twitter-scraper* (for access to the Twitter API)
 * *openpyxl* (for writing to Excel files)
 
-Usage
------
+Basic usage
+-----------
 
 **Download Twitter data** Use the ``down`` mode in order to download twitter data. After the ``down`` keyword, you need to specify the ``USERNAME`` (Twitter account name). Use the optional argument ``-p NUMBER`` to specify how many page you want to download. To retrieve older/more tweets, increase the number of pages. Example:
 
