@@ -5,7 +5,7 @@
 Download Twitter data for a certain user account
 """
 
-from collections import Counter
+from collections import Counter, OrderedDict
 from functools import partial
 from pathlib import Path
 import argparse
@@ -182,12 +182,19 @@ def plot_tweet_activity(twitter_data):
     plt.show()
 
 
-def get_tweets_per_day(twitter_data):
+def daterange(start_date, end_date):
+    # See https://stackoverflow.com/questions/1060279/iterating-through-a-range-of-dates-in-python
+    for n in range(int((end_date - start_date).days)):
+        yield start_date + datetime.timedelta(n)
+
+
+def get_tweets_per_day(twitter_data, count_zero_days=True):
     """
     Return tweets per day
 
     Args:
         :twitter_data: (dict) dictionary with twitter data
+        :count_zero_days: (bool) include day with zero tweets
 
     Returns:
         :tweets_per_day: (dict) dictionary with day (datetime object) and tweet count
@@ -199,6 +206,24 @@ def get_tweets_per_day(twitter_data):
     for tweet in tweets:
         time = datetime.datetime.fromisoformat(tweet['time'])
         tweets_per_day[datetime.datetime(time.year, time.month, time.day)] += 1
+
+    # Fill up the dictionary with zeros
+    if count_zero_days:
+        logging.info("Looking for days with zero tweets...")
+
+        # Get start and end date
+        start_date = datetime.datetime.fromisoformat(tweets[-1]['time'])
+        end_date = datetime.datetime.fromisoformat(tweets[0]['time'])
+        if end_date < start_date:
+            start_date, end_date, = end_date, start_date
+
+        logging.info(f"Date range is {start_date.strftime('%F')} to {end_date.strftime('%F')}")
+        for day in daterange(start_date, end_date):
+            tweets_per_day[datetime.datetime(day.year, day.month, day.day)] += 0
+
+    # Finally, make sure entries are properly sorted (OrderedDict should not be necessary in 3.8)
+    tweets_per_day = OrderedDict({k: v for k, v in sorted(tweets_per_day.items())})
+
     return tweets_per_day
 
 
@@ -257,7 +282,7 @@ def convert_to_excel(twitter_data, excel_file):
 
     tweets_per_day = get_tweets_per_day(twitter_data)
     for i, (day, num_tweets) in enumerate(tweets_per_day.items(), start=2):
-        sheet2.cell(row=i, column=1, value=day)
+        sheet2.cell(row=i, column=1, value=day.strftime('%F'))
         sheet2.cell(row=i, column=2, value=num_tweets)
 
     # ----- User data -----
