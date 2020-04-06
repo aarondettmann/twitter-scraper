@@ -2,7 +2,19 @@
 # -*- coding: utf-8 -*-
 
 """
-Download Twitter data for a certain user account
+Download the Twitter history for a certain user account
+
+Author: Aaron Dettmann
+ _________________________________________
+/ Fame is a vapor; popularity an          \
+| accident; the only earthly certainty is |
+\ oblivion. -- Mark Twain                 /
+ -----------------------------------------
+        \   ^__^
+         \  (oo)\_______
+            (__)\       )\/\
+                ||----w |
+                ||     ||
 """
 
 from collections import Counter, OrderedDict
@@ -15,11 +27,28 @@ import logging
 import os
 import sys
 
-import matplotlib.pyplot as plt
-import openpyxl as xl
-import twitter_scraper as tw
+# ===== Check non-standard libraries =====
+__import_errors__ = ''
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    __import_errors__ += "Please install 'matplotlib'\n"
 
-__prog_name__ = 'TwitterScraper'
+try:
+    import openpyxl as xl
+except ImportError:
+    __import_errors__ += "Please install 'openpyxl'\n"
+
+try:
+    import twitter_scraper as tw
+except ImportError:
+    __import_errors__ += "Please install 'twitter_scraper'"
+
+if __import_errors__:
+    print(__import_errors__, file=sys.stderr)
+    sys.exit(1)
+
+__prog_name__ = 'TwitterHistory'
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 DIR_DATA = os.path.join(HERE, 'data')
