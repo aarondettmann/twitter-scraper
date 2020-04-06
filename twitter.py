@@ -215,8 +215,8 @@ def get_tweets_per_day(twitter_data, count_zero_days=True):
         logging.info("Looking for days with zero tweets...")
 
         # Get start and end date
-        start_date = datetime.datetime.fromisoformat(tweets[-1]['time'])
-        end_date = datetime.datetime.fromisoformat(tweets[0]['time'])
+        all_dates = sorted(list(tweets_per_day.keys()))  # list of sorted dates
+        start_date, end_date = all_dates[0], all_dates[-1]
         if end_date < start_date:
             start_date, end_date, = end_date, start_date
 
@@ -224,10 +224,24 @@ def get_tweets_per_day(twitter_data, count_zero_days=True):
         for day in daterange(start_date, end_date):
             tweets_per_day[datetime.datetime(day.year, day.month, day.day)] += 0
 
-    # Finally, make sure entries are properly sorted (OrderedDict should not be necessary in 3.8)
-    tweets_per_day = OrderedDict({k: v for k, v in sorted(tweets_per_day.items())})
-
+    tweets_per_day = _sort_date_dict(tweets_per_day)
     return tweets_per_day
+
+
+def _sort_date_dict(date_dict):
+    """
+    Sort a dictionary with keys as dates in chronological order
+
+    Args:
+        :date_dict: (dict) dictionary with dates
+
+    Returns:
+        :sorted_dict: (dict) dictionary sorted by keys
+    """
+
+    # OrderedDict() should not be necessary in 3.8
+    sorted_dict = OrderedDict({k: v for k, v in sorted(date_dict.items())})
+    return sorted_dict
 
 
 def get_tweets(twitter_data):
