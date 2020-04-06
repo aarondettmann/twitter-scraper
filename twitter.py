@@ -50,7 +50,7 @@ def cli():
     # ----- Mode 'down' -----
     sub = subparsers.add_parser('down', help='download target twitter feed')
     sub.add_argument('usernames', metavar='NAMES', nargs='+', type=str, help='target twitter profile')
-    sub.add_argument('--pages', '-p', metavar='PAGES', type=int, help='number of pages to fetch', default=20)
+    sub.add_argument('--pages', '-p', metavar='PAGES', type=int, help='number of pages to fetch', default=200)
     sub.add_argument('--no-excel', action='store_true', help='do not convert data to exel file')
 
     # ----- Mode plot -----
@@ -66,6 +66,9 @@ def cli():
 
     if args.exec_mode == 'down':
         for username in args.usernames:
+            # Remove commas
+            username = username.strip().strip(',')
+
             json_file = download_history(username, args.pages)
             excel_file = json_file.replace('.json', '.xlsx')
             # Convert data to Excel spreadsheet by default
