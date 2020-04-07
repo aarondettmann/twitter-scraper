@@ -7,6 +7,13 @@
     :target: https://github.com/aarondettmann/twitter-scraper/blob/master/LICENSE.txt
     :alt: License
 
+|
+
+.. image:: https://raw.githubusercontent.com/aarondettmann/twitter-scraper/master/docs/img/logo.png
+   :target: https://github.com/aarondettmann/twitter-scraper/
+   :alt: Logo
+
+
 Twitter scraper
 ===============
 
