@@ -77,6 +77,20 @@ PROG_NAME = 'TwitterHistory'
 HERE = os.path.abspath(os.path.dirname(__file__))
 DIR_DATA = os.path.join(HERE, 'data')
 
+XL_FILL_GREEN = xl.styles.PatternFill(
+    start_color='A0D6B4',
+    end_color='A0D6B4',
+    fill_type='solid',
+)
+
+XL_FILL_RED = xl.styles.PatternFill(
+    start_color='FFBABA',
+    end_color='FFBABA',
+    fill_type='solid',
+)
+
+XL_FONT_BOLD = xl.styles.Font(bold=True)
+
 
 # See https://stackoverflow.com/questions/12122007/python-json-encoder-to-support-datetime
 class DateTimeEncoder(json.JSONEncoder):
@@ -331,11 +345,16 @@ def convert_to_excel(twitter_data, excel_file):
 
     headers = ["Time", "isRetweet", "replies", "likes", "hashtags", "text"]
     for i, header in enumerate(headers, start=1):
-        sheet1.cell(row=1, column=i, value=header)
+        cell = sheet1.cell(row=1, column=i)
+        cell.value = header
+        cell.fill = XL_FILL_GREEN
+        cell.font = XL_FONT_BOLD
 
     for i, tweet in enumerate(tweets, start=2):
         sheet1.cell(row=i, column=1, value=tweet['time'])
-        sheet1.cell(row=i, column=2, value=tweet['isRetweet'])
+        cell = sheet1.cell(row=i, column=2, value=str(tweet['isRetweet']))
+        if tweet['isRetweet']:
+                cell.fill = XL_FILL_RED
         sheet1.cell(row=i, column=3, value=tweet['replies'])
         sheet1.cell(row=i, column=4, value=tweet['likes'])
         sheet1.cell(row=i, column=5, value=str(tweet['entries']['hashtags']))
@@ -344,19 +363,51 @@ def convert_to_excel(twitter_data, excel_file):
     # ----- Tweets per day -----
     sheet2 = workbook.create_sheet(title="Twitter activity")
     for i, header in enumerate(["Time", "numTweets"], start=1):
-        sheet2.cell(row=1, column=i, value=header)
+        cell = sheet2.cell(row=1, column=i)
+        cell.value = header
+        cell.fill = XL_FILL_GREEN
+        cell.font = XL_FONT_BOLD
 
     tweets_per_day = get_tweets_per_day(twitter_data)
     for i, (day, num_tweets) in enumerate(tweets_per_day.items(), start=2):
         sheet2.cell(row=i, column=1, value=day.strftime('%F'))
         sheet2.cell(row=i, column=2, value=num_tweets)
 
+    # ----- Add bar chart -----
+    BarChart = xl.chart.BarChart
+    Reference = xl.chart.Reference
+    DateAxis = xl.chart.axis.DateAxis
+
+    values = Reference(
+        sheet2,
+        min_col=1,
+        max_col=2,
+        min_row=1,
+        max_row=len(tweets_per_day)+1  # Row starts at "1"
+    )
+    chart = BarChart()
+    chart.type = 'col'
+    chart.style = 10
+    chart.title = "Tweet activity"
+    chart.x_axis.title = 'Time'
+    chart.y_axis.title = 'Number of tweets'
+
+    chart.x_axis = DateAxis()
+    chart.x_axis.number_format = 'yyyy/mm/dd'
+    chart.x_axis.majorTimeUnit = 'days'
+
+    chart.add_data(values, titles_from_data=False)
+    sheet2.add_chart(chart, "D2")
+
     # ----- User data -----
     sheet3 = workbook.create_sheet(title="Account")
     profile = twitter_data['profile']
     headers = ["name", "username", "likes_count", "tweets_count", "followers_count", "following_count"]
     for i, header in enumerate(headers, start=1):
-        sheet3.cell(row=i, column=1, value=header)
+        cell = sheet3.cell(row=i, column=1)
+        cell.value = header
+        cell.fill = XL_FILL_GREEN
+        cell.font = XL_FONT_BOLD
         sheet3.cell(row=i, column=2, value=profile.get(header, 'NONE'))
 
     logging.info(f"Saving data: {excel_file}")
