@@ -4,7 +4,8 @@
 """
 Download the Twitter history for a certain user account
 
-Author: Aaron Dettmann
+Copyright (c) 2020 Aaron Dettmann
+License: MIT
  _________________________________________
 / Fame is a vapor; popularity an          \
 | accident; the only earthly certainty is |
@@ -17,8 +18,11 @@ Author: Aaron Dettmann
                 ||     ||
 """
 
+# Author: Aaron Dettmann
+
 from collections import Counter, OrderedDict
 from functools import partial
+from importlib import import_module
 from pathlib import Path
 import argparse
 import datetime
@@ -27,35 +31,51 @@ import logging
 import os
 import sys
 
-# ===== Check non-standard libraries =====
-__import_errors__ = ''
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    __import_errors__ += "Please install 'matplotlib'\n"
-
-try:
-    import openpyxl as xl
-except ImportError:
-    __import_errors__ += "Please install 'openpyxl'\n"
-
-try:
-    import twitter_scraper as tw
-except ImportError:
-    __import_errors__ += "Please install 'twitter_scraper'"
-
-if __import_errors__:
-    print(__import_errors__, file=sys.stderr)
-    sys.exit(1)
-
-__prog_name__ = 'TwitterHistory'
-
-HERE = os.path.abspath(os.path.dirname(__file__))
-DIR_DATA = os.path.join(HERE, 'data')
-
 LOG_FMT = '%(asctime)s | %(levelname)s | %(message)s'
 LOG_DATE_FMT = '%F %H:%M:%S'
 logging.basicConfig(level=logging.INFO, format=LOG_FMT, datefmt=LOG_DATE_FMT)
+
+
+def import_module_by_name(module_name):
+    """
+    Import a module from a string
+
+    Args:
+        :module_name: (str) name of the module
+
+    Returns:
+        :module: (obj) loaded module (or None in case of error)
+    """
+
+    try:
+        module = import_module(module_name)
+    except ModuleNotFoundError:
+        logging.error(f"Module {module_name!r} not found. Please install the module.")
+        return None
+    else:
+        return module
+
+
+error = False
+# ----- Non-standard libraries -----
+plt = import_module_by_name("matplotlib.pyplot")
+xl = import_module_by_name("openpyxl")
+tw = import_module_by_name("twitter_scraper")
+if None in (plt, xl, tw):
+    error = True
+
+# ----- Only support Python 3.8.x -----
+PY_VERSION = sys.version_info
+if not (PY_VERSION[0] == 3 and PY_VERSION[1] >= 8):
+    logging.error("Python version 3.8.0 or higher is needed.")
+    error = True
+
+if error:
+    sys.exit(1)
+
+PROG_NAME = 'TwitterHistory'
+HERE = os.path.abspath(os.path.dirname(__file__))
+DIR_DATA = os.path.join(HERE, 'data')
 
 
 # See https://stackoverflow.com/questions/12122007/python-json-encoder-to-support-datetime
@@ -73,7 +93,7 @@ dump_pretty_json = partial(json.dump, cls=DateTimeEncoder, indent=4, separators=
 
 
 def cli():
-    parser = argparse.ArgumentParser(prog=f'{__prog_name__}')
+    parser = argparse.ArgumentParser(prog=f'{PROG_NAME}')
     subparsers = parser.add_subparsers(help='execution modes', dest='exec_mode')
 
     # ----- Mode 'down' -----
