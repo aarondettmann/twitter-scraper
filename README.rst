@@ -1,3 +1,12 @@
+.. image:: https://img.shields.io/badge/python-v3.8-blue.svg?style=flat
+   :target: https://www.python.org/
+   :alt: Python version
+
+
+.. image:: https://img.shields.io/badge/license-MIT-green.svg?style=flat
+    :target: https://github.com/aarondettmann/twitter-scraper/blob/master/LICENSE.txt
+    :alt: License
+
 Twitter scraper
 ===============
 
