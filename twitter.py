@@ -218,7 +218,7 @@ def daterange(start_date, end_date):
         yield start_date + datetime.timedelta(n)
 
 
-def get_tweets_per_day(twitter_data, count_zero_days=True):
+def get_tweets_per_day(twitter_data, count_zero_days=True, include_retweet=True):
     """
     Return tweets per day
 
@@ -235,6 +235,8 @@ def get_tweets_per_day(twitter_data, count_zero_days=True):
     tweets_per_day = Counter()
     for tweet in tweets:
         time = datetime.datetime.fromisoformat(tweet['time'])
+        if tweet['isRetweet'] and not include_retweet:
+            continue
         tweets_per_day[datetime.datetime(time.year, time.month, time.day)] += 1
 
     # Fill up the dictionary with zeros
@@ -326,16 +328,19 @@ def convert_to_excel(twitter_data, excel_file):
 
     # ----- Tweets per day -----
     sheet2 = workbook.create_sheet(title="Twitter activity")
-    for i, header in enumerate(["Time", "numTweets"], start=1):
+    for i, header in enumerate(["Time", "totTweets", "ownTweets"], start=1):
         cell = sheet2.cell(row=1, column=i)
         cell.value = header
         cell.fill = XL_FILL_GREEN
         cell.font = XL_FONT_BOLD
 
     tweets_per_day = get_tweets_per_day(twitter_data)
+    # Only count tweets made by the own account (exclude any retweets)
+    tweets_per_day_own = get_tweets_per_day(twitter_data, include_retweet=False)
     for i, (day, num_tweets) in enumerate(tweets_per_day.items(), start=2):
         sheet2.cell(row=i, column=1, value=day.strftime('%F'))
         sheet2.cell(row=i, column=2, value=num_tweets)
+        sheet2.cell(row=i, column=3, value=tweets_per_day_own.get(day, 0))
 
     # ----- User data -----
     sheet3 = workbook.create_sheet(title="Account")
