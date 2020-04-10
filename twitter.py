@@ -309,7 +309,7 @@ def convert_to_excel(twitter_data, excel_file):
     sheet1 = workbook.active
     sheet1.title = "Tweet raw data"
 
-    headers = ["Time", "isRetweet", "replies", "likes", "hashtags", "text"]
+    headers = ["Time", "isRetweet", "replies", "retweets", "likes", "hashtags", "text"]
     for i, header in enumerate(headers, start=1):
         cell = sheet1.cell(row=1, column=i)
         cell.value = header
@@ -322,9 +322,10 @@ def convert_to_excel(twitter_data, excel_file):
         if tweet['isRetweet']:
                 cell.fill = XL_FILL_RED
         sheet1.cell(row=i, column=3, value=tweet['replies'])
-        sheet1.cell(row=i, column=4, value=tweet['likes'])
-        sheet1.cell(row=i, column=5, value=str(tweet['entries']['hashtags']))
-        sheet1.cell(row=i, column=6, value=tweet['text'])
+        sheet1.cell(row=i, column=4, value=tweet['retweets'])
+        sheet1.cell(row=i, column=5, value=tweet['likes'])
+        sheet1.cell(row=i, column=6, value=str(tweet['entries']['hashtags']))
+        sheet1.cell(row=i, column=7, value=tweet['text'])
 
     # ----- Tweets per day -----
     sheet2 = workbook.create_sheet(title="Twitter activity")
