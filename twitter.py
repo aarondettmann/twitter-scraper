@@ -58,10 +58,9 @@ def import_module_by_name(module_name):
 
 error = False
 # ----- Non-standard libraries -----
-plt = import_module_by_name("matplotlib.pyplot")
 xl = import_module_by_name("openpyxl")
 tw = import_module_by_name("twitter_scraper")
-if None in (plt, xl, tw):
+if None in (xl, tw):
     error = True
 
 # ----- Only support Python 3.8.x -----
@@ -116,11 +115,6 @@ def cli():
     sub.add_argument('--pages', '-p', metavar='PAGES', type=int, help='number of pages to fetch', default=200)
     sub.add_argument('--no-excel', action='store_true', help='do not convert data to exel file')
 
-    # ----- Mode plot -----
-    sub = subparsers.add_parser('plot', help='plot twitter feed data')
-    sub.add_argument("filename", metavar='FILE', help="data to visualize", type=str)
-    sub.add_argument("--show", "-s", metavar='PLOTNAME', help="available plots: 'activity'", type=str, default='activity')
-
     # ----- Mode 'xl' -----
     sub = subparsers.add_parser('xl', help='convert data to excel spreadsheet')
     sub.add_argument("filename", metavar='FILE', help="data to convert", type=str)
@@ -138,10 +132,6 @@ def cli():
             if not args.no_excel:
                 twitter_data = load_twitter_data(json_file)
                 convert_to_excel(twitter_data, excel_file)
-    elif args.exec_mode == 'plot':
-        filename = os.path.abspath(args.filename)
-        twitter_data = load_twitter_data(filename)
-        plot_tweet_activity(twitter_data)
     elif args.exec_mode == 'xl':
         json_file = os.path.abspath(args.filename)
         excel_file = json_file.replace('.json', '.xlsx')
@@ -220,32 +210,6 @@ def download_history(username, pages):
     with open(file_user_data, 'w') as fp:
         dump_pretty_json(data, fp)
     return file_user_data
-
-
-def plot_tweet_activity(twitter_data):
-    """
-    Visualize daily tweet activity
-
-    Args:
-        :twitter_data: (dict) dictionary with twitter data
-    """
-
-    tweets = twitter_data['history']
-    profile = twitter_data['profile']
-    username = profile.get('username', 'NONE')
-
-    tweets_per_day = get_tweets_per_day(twitter_data)
-
-    logging.info(f"Plotting tweet activity for {username}...")
-    dates = list(tweets_per_day.keys())
-    num_tweets = list(tweets_per_day.values())
-
-    plt.plot_date(dates, num_tweets, '.', color='black')
-    plt.gcf().autofmt_xdate()
-    plt.title(f"Tweet activity @{username} (total = {len(tweets)})")
-    plt.xlabel("Time")
-    plt.ylabel("Number of tweets")
-    plt.show()
 
 
 def daterange(start_date, end_date):

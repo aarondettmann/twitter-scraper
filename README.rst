@@ -65,7 +65,6 @@ To run the ``twitter.py``, you first need to install a few additional Python lib
 
 This automatically installs the following libraries:
 
-* *matplotlib* (for plotting)
 * *twitter-scraper* (for access to the Twitter API)
 * *openpyxl* (for writing to Excel files)
 
@@ -89,14 +88,6 @@ Use the ``down`` mode in order to download twitter data. After the ``down`` keyw
     python twitter.py down elonmusk -p 5
 
 Instead of a user name it is also possible to use a *hashtag*. Note that you might have to put the hashtag in quotation marks (e.g. ``python twitter.py down "#aviation" -p 10``).
-
-**Plotting**
-
-You can visualize data using the **plot** mode. As a second argument, specify the JSON file with the twitter data you downloaded in the previous step. Example:
-
-.. code::
-
-    python twitter.py plot data/elonmusk_2020-04-01_1030/data.json
 
 **Excel files**
 
