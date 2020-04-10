@@ -373,32 +373,6 @@ def convert_to_excel(twitter_data, excel_file):
         sheet2.cell(row=i, column=1, value=day.strftime('%F'))
         sheet2.cell(row=i, column=2, value=num_tweets)
 
-    # ----- Add bar chart -----
-    BarChart = xl.chart.BarChart
-    Reference = xl.chart.Reference
-    DateAxis = xl.chart.axis.DateAxis
-
-    values = Reference(
-        sheet2,
-        min_col=1,
-        max_col=2,
-        min_row=1,
-        max_row=len(tweets_per_day)+1  # Row starts at "1"
-    )
-    chart = BarChart()
-    chart.type = 'col'
-    chart.style = 10
-    chart.title = "Tweet activity"
-    chart.x_axis.title = 'Time'
-    chart.y_axis.title = 'Number of tweets'
-
-    chart.x_axis = DateAxis()
-    chart.x_axis.number_format = 'yyyy/mm/dd'
-    chart.x_axis.majorTimeUnit = 'days'
-
-    chart.add_data(values, titles_from_data=False)
-    sheet2.add_chart(chart, "D2")
-
     # ----- User data -----
     sheet3 = workbook.create_sheet(title="Account")
     profile = twitter_data['profile']
