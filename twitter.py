@@ -191,6 +191,10 @@ def load_twitter_data(filename):
     return twitter_data
 
 
+def get_tweet_url(username, tweet_id):
+    return f"https://twitter.com/{username}/status/{tweet_id}"
+
+
 def download_history(username, pages):
     """
     Download tweets and save data on disk
@@ -321,6 +325,7 @@ def convert_to_excel(twitter_data, excel_file):
 
     logging.info("Creating excel file...")
     tweets = get_tweets(twitter_data)
+    username = twitter_data['profile'].get('username', None)
 
     workbook = xl.Workbook()
 
@@ -328,7 +333,7 @@ def convert_to_excel(twitter_data, excel_file):
     sheet1 = workbook.active
     sheet1.title = "Tweet raw data"
 
-    headers = ["Time", "isRetweet", "replies", "retweets", "likes", "hashtags", "text"]
+    headers = ["Time", "url", "isRetweet", "replies", "retweets", "likes", "hashtags", "text"]
     for i, header in enumerate(headers, start=1):
         cell = sheet1.cell(row=1, column=i)
         cell.value = header
@@ -337,18 +342,19 @@ def convert_to_excel(twitter_data, excel_file):
 
     for i, tweet in enumerate(tweets, start=2):
         sheet1.cell(row=i, column=1, value=tweet['time'])
-        cell = sheet1.cell(row=i, column=2, value=str(tweet['isRetweet']))
+        sheet1.cell(row=i, column=2, value="link").hyperlink = get_tweet_url(username, tweet['tweetId'])
+        cell = sheet1.cell(row=i, column=3, value=str(tweet['isRetweet']))
         if tweet['isRetweet']:
                 cell.fill = XL_FILL_RED
-        sheet1.cell(row=i, column=3, value=tweet['replies'])
-        sheet1.cell(row=i, column=4, value=tweet['retweets'])
-        sheet1.cell(row=i, column=5, value=tweet['likes'])
-        sheet1.cell(row=i, column=6, value=str(tweet['entries']['hashtags']))
-        sheet1.cell(row=i, column=7, value=tweet['text'])
+        sheet1.cell(row=i, column=4, value=tweet['replies'])
+        sheet1.cell(row=i, column=5, value=tweet['retweets'])
+        sheet1.cell(row=i, column=6, value=tweet['likes'])
+        sheet1.cell(row=i, column=7, value=str(tweet['entries']['hashtags']))
+        sheet1.cell(row=i, column=8, value=tweet['text'])
 
     # ----- Tweets per day -----
     sheet2 = workbook.create_sheet(title="Twitter activity")
-    for i, header in enumerate(["Time", "totTweets", "ownTweets"], start=1):
+    for i, header in enumerate(["Day", "totTweets", "ownTweets"], start=1):
         cell = sheet2.cell(row=1, column=i)
         cell.value = header
         cell.fill = XL_FILL_GREEN
