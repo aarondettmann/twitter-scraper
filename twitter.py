@@ -117,7 +117,7 @@ def cli():
 
     # ----- Mode 'xl' -----
     sub = subparsers.add_parser('xl', help='convert data to excel spreadsheet')
-    sub.add_argument("filename", metavar='FILE', help="data to convert", type=str)
+    sub.add_argument("path", metavar='FILE or DIRECTORY', help="data to convert", type=str)
 
     args = parser.parse_args()
 
@@ -133,11 +133,30 @@ def cli():
                 twitter_data = load_twitter_data(json_file)
                 convert_to_excel(twitter_data, excel_file)
     elif args.exec_mode == 'xl':
-        json_file = os.path.abspath(args.filename)
-        excel_file = json_file.replace('.json', '.xlsx')
+        if Path(args.path).is_file():
+            if not args.path.endswith(".json"):
+                logging.error(f"{args.path!r} seems to be a file, but not recognized as JSON...")
+                sys.exit(1)
+            filenames = (args.path,)
+        elif Path(args.path).is_dir():
+            logging.info(f"Trying to locate JSON files...")
+            filenames = list(Path(args.path).rglob('*.json'))
+            if not filenames:
+                logging.error(f"No JSON files found in {args.path!r}...")
+                sys.exit(1)
+            for filename in filenames:
+                logging.info(f"Found {filename}...")
+        else:
+            logging.error("Input {args.path!r} not recognized as file or directory")
+            sys.exit(1)
 
-        twitter_data = load_twitter_data(json_file)
-        convert_to_excel(twitter_data, excel_file)
+        # Convert JSON to XLSX (Excel files)
+        for filename in filenames:
+            print(filename)
+            json_file = os.path.abspath(filename)
+            excel_file = json_file.replace('.json', '.xlsx')
+            twitter_data = load_twitter_data(json_file)
+            convert_to_excel(twitter_data, excel_file)
     else:
         parser.print_help()
 
