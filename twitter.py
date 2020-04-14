@@ -29,6 +29,7 @@ import datetime
 import json
 import logging
 import os
+import re
 import sys
 
 LOG_FMT = '%(asctime)s | %(levelname)s | %(message)s'
@@ -39,7 +40,7 @@ logging.basicConfig(level=logging.INFO, format=LOG_FMT, datefmt=LOG_DATE_FMT)
 ID = 0
 
 
-def get_uniq_id():
+def get_unique_id():
     """Return a unique number as string from a global counter"""
     global ID
     ID += 1
@@ -157,12 +158,11 @@ def cli():
             for filename in filenames:
                 logging.info(f"Found {filename}...")
         else:
-            logging.error("Input {args.path!r} not recognized as file or directory")
+            logging.error(f"Input {args.path!r} not recognized as file or directory")
             sys.exit(1)
 
         # Convert JSON to XLSX (Excel files)
         for filename in filenames:
-            print(filename)
             json_file = os.path.abspath(filename)
             excel_file = json_file.replace('.json', '.xlsx')
             twitter_data = load_twitter_data(json_file)
@@ -317,12 +317,30 @@ def _sort_tweets_by_date(tweets):
         :tweets_sorted: (list) sorted list of Tweets
     """
 
+    # Sanity check of date format. String in iso-format expected.
+    # We assume that if first tweet looks okay, all will.
+    time_first_tweet = tweets[0]['time']
+    if not isinstance(time_first_tweet, str):
+        logging.error(f"Date must be a string, not {type(time_first_tweet)}. Exit.")
+        sys.exit(1)
+
+    match_iso8601 = re.compile(
+       r'^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-' +
+       r'(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9])' +
+       r':([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?' +
+       r'(Z|[+-](?:2[0-3]|[01][0-9]):[0-5][0-9])?$'
+    ).match
+
+    if match_iso8601(time_first_tweet) is None:
+        logging.error(f"Date does not look like valid iso-format ({time_first_tweet!r}). Exit.")
+        sys.exit(1)
+
     len_orig = len(tweets)
     # Add unique ID as suffix to timestamps (as strings), since in some special
     # cases, there can be two different tweets which have the exact same timestamp
     tweets_as_date_dict = _sort_date_dict(
         {
-            tweet['time'] + get_uniq_id(): tweet
+            tweet['time'] + get_unique_id(): tweet
             for tweet in tweets
         }
     )
