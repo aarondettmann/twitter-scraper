@@ -36,6 +36,16 @@ LOG_DATE_FMT = '%F %H:%M:%S'
 logging.basicConfig(level=logging.INFO, format=LOG_FMT, datefmt=LOG_DATE_FMT)
 
 
+ID = 0
+
+
+def get_uniq_id():
+    """Return a unique number as string from a global counter"""
+    global ID
+    ID += 1
+    return str(ID)
+
+
 def import_module_by_name(module_name):
     """
     Import a module from a string
@@ -296,12 +306,40 @@ def _sort_date_dict(date_dict):
     return sorted_dict
 
 
-def get_tweets(twitter_data):
+def _sort_tweets_by_date(tweets):
+    """
+    Ensure tweets objects are are sorted by date
+
+    Args:
+        :tweets: (list) Tweets
+
+    Returns:
+        :tweets_sorted: (list) sorted list of Tweets
+    """
+
+    len_orig = len(tweets)
+    # Add unique ID as suffix to timestamps (as strings), since in some special
+    # cases, there can be two different tweets which have the exact same timestamp
+    tweets_as_date_dict = _sort_date_dict(
+        {
+            tweet['time'] + get_uniq_id(): tweet
+            for tweet in tweets
+        }
+    )
+    tweets_sorted = list(tweets_as_date_dict.values())
+    if len(tweets_sorted) != len_orig:
+        logging.error(f"Some tweets went missing while sorting... Exit.")
+        sys.exit(1)
+    return tweets_sorted
+
+
+def get_tweets(twitter_data, sort=True):
     """
     Return tweets from twitter data or return error
 
     Args:
         :twitter_data: (dict) dictionary with twitter data
+        :sort: (bool) if true tweets will be sorted by date
 
     Returns:
         :tweets: (list) Tweets
@@ -311,6 +349,10 @@ def get_tweets(twitter_data):
     if tweets is None:
         logging.error("Failed to retrieve tweets... Exit.")
         sys.exit(1)
+
+    if sort:
+        tweets = _sort_tweets_by_date(tweets)
+
     return tweets
 
 
