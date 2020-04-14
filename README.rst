@@ -54,6 +54,8 @@ The repository including the main script will be downloaded. Next, change into t
 
 You may list the files in the current directory by running ``dir`` in *cmd*. Here, you will see the main script called ``twitter.py``. You may also open the *Explorer* file browser which will show you the same files. To open Explorer in your current directory from the *cmd*, enter ``explorer .`` (notice the dot!).
 
+👍 To update the Twitter script you do not need to download it manually (assuming you downloaded the repository using *git* before). In the *cmd*, navigate to the ``twitter-scraper`` folder using the ``dir`` and ``cd`` commands as shown above. In the ``twitter-scraper`` folder, run ``update.bat`` (works on Windows only) or ``git pull``. If there are any updates, these will be downloaded.
+
 Step 2: Install additional Python libraries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
