@@ -152,10 +152,16 @@ def cli():
     sub.add_argument('usernames', metavar='NAMES', nargs='+', type=str, help='target twitter profile')
     sub.add_argument('--pages', '-p', metavar='PAGES', type=int, help='number of pages to fetch', default=200)
     sub.add_argument('--no-excel', action='store_true', help='do not convert data to exel file')
+    # TODO
+    sub.add_argument('--filter', '-f', metavar='HASHTAGS or KEYWORDS', nargs='+',
+                     type=str, help='filter tweets by #hashtag or keyword (text and hashtags)')
 
     # ----- Mode 'xl' -----
     sub = subparsers.add_parser('xl', help='convert data to excel spreadsheet')
     sub.add_argument("path", metavar='FILE or DIRECTORY', help="data to convert", type=str)
+    # TODO
+    sub.add_argument('--filter', '-f', metavar='HASHTAGS or KEYWORDS', nargs='+',
+                     type=str, help='filter tweets by #hashtag or keyword (text and hashtags)')
 
     args = parser.parse_args()
 
@@ -167,7 +173,7 @@ def cli():
             # Convert data to Excel spreadsheet by default
             if not args.no_excel:
                 twitter_data = load_twitter_data(json_file)
-                convert_to_excel(twitter_data, excel_file)
+                convert_to_excel(twitter_data, excel_file, filters=args.filter)
     elif args.exec_mode == 'xl':
         if Path(args.path).is_file():
             if not args.path.endswith('.json'):
@@ -191,7 +197,7 @@ def cli():
             json_file = os.path.abspath(filename)
             excel_file = json_file.replace('.json', '.xlsx')
             twitter_data = load_twitter_data(json_file)
-            convert_to_excel(twitter_data, excel_file)
+            convert_to_excel(twitter_data, excel_file, filters=args.filter)
     else:
         parser.print_help()
 
@@ -413,43 +419,86 @@ def get_tweets(twitter_data, sort=True):
     return tweets
 
 
-def convert_to_excel(twitter_data, excel_file):
+def filter_tweets(tweets, filter_kw):
+    """
+    Filter tweets by a #hashtag or keyword
+
+    Args:
+        :tweets: (list) Tweets from 'twitter_data'
+        :filter_kw: (str) filter keyword
+
+    Returns:
+        :filtered_tweets: (list) Filtered tweets from 'twitter_data'
+
+    Note:
+        * If 'filter_kw' starts with '#' it is interpreted as a hashtag, and
+          only hashtags will be checked. If 'filter_kw' is not a hashtag, both
+          hashtags and the tweet text will be checked.
+    """
+
+    is_hashtag = filter_kw.startswith('#')
+    filter_kw = filter_kw.replace('#', '').lower()
+
+    filtered_tweets = []
+    for tweet in tweets:
+        hashtags = list(ht.replace('#', '').lower() for ht in tweet['entries']['hashtags'])
+        if filter_kw in hashtags:
+            filtered_tweets.append(tweet)
+            continue
+        if not is_hashtag and filter_kw in tweet['text'].lower():
+            filtered_tweets.append(tweet)
+
+    return filtered_tweets
+
+
+def print_tweets_to_xl_sheet(sheet, tweets, username):
+    """
+    List all tweets in an Excel sheet
+
+    Args:
+        :sheet: (obj) Excel sheet reference
+        :tweets: (list) Tweets from 'twitter_data'
+    """
+
+    headers = ["Time", "url", "isRetweet", "replies", "retweets", "likes", "hashtags", "text"]
+    for i, header in enumerate(headers, start=1):
+        cell = sheet.cell(row=1, column=i)
+        cell.value = header
+        cell.fill = XL_FILL_GREEN
+        cell.font = XL_FONT_BOLD
+
+    for i, tweet in enumerate(tweets, start=2):
+        sheet.cell(row=i, column=1, value=tweet['time'])
+        sheet.cell(row=i, column=2, value="link").hyperlink = get_tweet_url(username, tweet['tweetId'])
+        cell = sheet.cell(row=i, column=3, value=str(tweet['isRetweet']))
+        if tweet['isRetweet']:
+                cell.fill = XL_FILL_RED
+        sheet.cell(row=i, column=4, value=tweet['replies'])
+        sheet.cell(row=i, column=5, value=tweet['retweets'])
+        sheet.cell(row=i, column=6, value=tweet['likes'])
+        sheet.cell(row=i, column=7, value=str(tweet['entries']['hashtags']))
+        sheet.cell(row=i, column=8, value=tweet['text'])
+
+
+def convert_to_excel(twitter_data, excel_file, filters):
     """
     Convert a twitter data dictionary to a excel file
 
     Args:
         :twitter_data: (dict) dictionary with twitter data
         :excel_file: (str) excel file name
+        :filters: (list) list of filters
     """
 
     logger.info("Creating excel file...")
     tweets = get_tweets(twitter_data)
     username = twitter_data['profile'].get('username', None)
 
-    workbook = xl.Workbook()
-
     # ----- Tweet data -----
+    workbook = xl.Workbook()
     sheet1 = workbook.active
-    sheet1.title = "Tweet raw data"
-
-    headers = ["Time", "url", "isRetweet", "replies", "retweets", "likes", "hashtags", "text"]
-    for i, header in enumerate(headers, start=1):
-        cell = sheet1.cell(row=1, column=i)
-        cell.value = header
-        cell.fill = XL_FILL_GREEN
-        cell.font = XL_FONT_BOLD
-
-    for i, tweet in enumerate(tweets, start=2):
-        sheet1.cell(row=i, column=1, value=tweet['time'])
-        sheet1.cell(row=i, column=2, value="link").hyperlink = get_tweet_url(username, tweet['tweetId'])
-        cell = sheet1.cell(row=i, column=3, value=str(tweet['isRetweet']))
-        if tweet['isRetweet']:
-                cell.fill = XL_FILL_RED
-        sheet1.cell(row=i, column=4, value=tweet['replies'])
-        sheet1.cell(row=i, column=5, value=tweet['retweets'])
-        sheet1.cell(row=i, column=6, value=tweet['likes'])
-        sheet1.cell(row=i, column=7, value=str(tweet['entries']['hashtags']))
-        sheet1.cell(row=i, column=8, value=tweet['text'])
+    sheet1.title = "Twitter raw data"
+    print_tweets_to_xl_sheet(sheet1, tweets, username)
 
     # ----- Tweets per day -----
     sheet2 = workbook.create_sheet(title="Twitter activity")
@@ -478,6 +527,16 @@ def convert_to_excel(twitter_data, excel_file):
         cell.font = XL_FONT_BOLD
         sheet3.cell(row=i, column=2, value=profile.get(header, 'NONE'))
 
+    # ----- Filter tweet data by keywords or tweets -----
+    if filters is not None:
+        for filter_kw in filters:
+            logger.info(f"Applying filter {filter_kw!r}...")
+            # !!! bug!? worksheet empty if # of ' used!?
+            sheet = workbook.create_sheet(f"Filter -- {filter_kw.replace('#', '')}", 1)
+            filtered_tweets = filter_tweets(tweets, filter_kw)
+            print_tweets_to_xl_sheet(sheet, filtered_tweets, username)
+
+    # ----- Save data... -----
     logger.info(f"Saving data: {truncate_filepath(excel_file)}")
     workbook.save(excel_file)
 
