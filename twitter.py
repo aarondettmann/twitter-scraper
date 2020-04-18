@@ -549,7 +549,7 @@ def convert_to_excel(twitter_data, excel_file, filters):
 def parse_filter_kw(filter_kw):
     filter_kw = filter_kw.strip()
     is_hashtag = filter_kw.startswith('#')
-    parsed_kw = filter_kw.replace('#', '').lower()
+    parsed_kw = filter_kw.replace('#', '').repace("'", '').lower()
     return (is_hashtag, parsed_kw)
 
 
