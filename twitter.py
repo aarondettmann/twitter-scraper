@@ -47,17 +47,18 @@ def get_unique_id():
 
 def truncate_filepath(filepath, max_len=50, basename_only=False):
     """
-    Truncate a long filepath
+    Truncate a long filepath --> '.../long/path.txt'
 
     Args:
         :filepath: filepath to truncate
-        :max_len: maximum string lenght to return
-        :basename_only: if True, only use the basename of 'filepath'
+        :max_len: (int) maximum string lenght to return
+        :basename_only: (bool) if True, only use the basename of 'filepath'
 
     Returns:
-        :trunc_string: truncated filepath
+        :trunc_string: (str) truncated filepath
     """
 
+    # Explicit cast to string, e.g. needed for 'Path()' from 'pathlib'
     filepath = str(filepath)
     pathname = os.path.basename(filepath) if basename_only else filepath
 
@@ -72,7 +73,7 @@ def truncate_filepath(filepath, max_len=50, basename_only=False):
 
 def import_module_by_name(module_name):
     """
-    Import a module from a string
+    Import a module from a string representation
 
     Args:
         :module_name: (str) name of the module
@@ -110,6 +111,7 @@ PROG_NAME = 'TwitterHistory'
 HERE = os.path.abspath(os.path.dirname(__file__))
 DIR_DATA = os.path.join(HERE, 'data')
 
+# ----- Excel font and cell colours -----
 XL_FILL_GREEN = xl.styles.PatternFill(
     start_color='A0D6B4',
     end_color='A0D6B4',
@@ -125,8 +127,13 @@ XL_FILL_RED = xl.styles.PatternFill(
 XL_FONT_BOLD = xl.styles.Font(bold=True)
 
 
-# See https://stackoverflow.com/questions/12122007/python-json-encoder-to-support-datetime
+# ----- JSON -----
 class DateTimeEncoder(json.JSONEncoder):
+    """
+    Encoder for serialisation of 'datetime' objects to JSON
+
+    See: https://stackoverflow.com/questions/12122007/python-json-encoder-to-support-datetime
+    """
     def default(self, obj):
         if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
             return obj.isoformat()
@@ -139,11 +146,33 @@ dump_pretty_json = partial(
     json.dump,
     cls=DateTimeEncoder,
     indent=4,
-    separators=(',', ': ')
+    separators=(',', ': '),
 )
 
 
+def parse_string(string, *, remove):
+    """
+    Return a parsed string
+
+    Args:
+        :string: (str) string to parse
+        :remove: (list) characters to remove
+
+    Returns:
+        :parsed_string: (str) parsed string
+    """
+
+    parsed_string = string
+
+    for char in remove:
+        parsed_string = parsed_string.replace(char, '')
+
+    return parsed_string
+
+
 def cli():
+    """Command line interface"""
+
     parser = argparse.ArgumentParser(prog=f'{PROG_NAME}')
     subparsers = parser.add_subparsers(help='execution modes', dest='exec_mode')
 
@@ -170,15 +199,20 @@ def cli():
 
     args = parser.parse_args()
 
+    logger.info(f"----- {PROG_NAME} (mode: {args.exec_mode}) -----")
+
+    # MODE: Download
     if args.exec_mode == 'down':
         for username in args.usernames:
-            username = username.strip().strip(',')  # Remove commas
+            username = parse_string(username, remove=(' ', ','))  # Remove commas
             json_file = download_history(username, args.pages)
             excel_file = json_file.replace('.json', '.xlsx')
             # Convert data to Excel spreadsheet by default
             if not args.no_excel:
                 twitter_data = load_twitter_data(json_file)
                 convert_to_excel(twitter_data, excel_file, filters=args.filter)
+
+    # MODE: Convert to Excel
     elif args.exec_mode == 'xl':
         if Path(args.path).is_file():
             if not args.path.endswith('.json'):
@@ -203,6 +237,7 @@ def cli():
             excel_file = json_file.replace('.json', '.xlsx')
             twitter_data = load_twitter_data(json_file)
             convert_to_excel(twitter_data, excel_file, filters=args.filter)
+
     else:
         parser.print_help()
 
@@ -257,7 +292,8 @@ def download_history(username, pages):
         profile = tw.Profile(username)
         logger.info(f"Target: {username} ({profile.name}) | {profile.followers_count:,} followers")
     except:
-        if username.startswith('#'):
+        is_hashtag, _ = parse_filter_kw(username)
+        if is_hashtag:
             logger.info(f"Interpreting {username!r} as a hashtag...")
         else:
             logger.error(f"Failed to fetch username data for {username!r}")
@@ -289,8 +325,8 @@ def daterange(start_date, end_date):
     Yield datetime objects (delta = 1 day) between start and end date
 
     Args:
-        :start_date: (obj) start date time object
-        :end_date: (obj) end date time object
+        :start_date: (obj) start datetime object
+        :end_date: (obj) end datetime object
 
     Note:
         * https://stackoverflow.com/questions/1060279/iterating-through-a-range-of-dates-in-python
@@ -310,7 +346,7 @@ def get_tweets_per_day(twitter_data, count_zero_days=True, include_retweet=True)
         :include_retweet: (bool) if True, include retweets
 
     Returns:
-        :tweets_per_day: (dict) dictionary with day (datetime object) and tweet count
+        :tweets_per_day: (dict) day (datetime object) as key and tweet count as value
     """
 
     tweets = get_tweets(twitter_data)
@@ -318,7 +354,7 @@ def get_tweets_per_day(twitter_data, count_zero_days=True, include_retweet=True)
 
     tweets_per_day = Counter()
     for tweet in tweets:
-        time = datetime.datetime.fromisoformat(tweet['time'])
+        time = datetime.datetime.fromisoformat(tweet['time'])  # assuming date is a string here!!!
         if tweet['isRetweet'] and not include_retweet:
             continue
         tweets_per_day[datetime.datetime(time.year, time.month, time.day)] += 1
@@ -386,18 +422,23 @@ def _sort_tweets_by_date(tweets):
         sys.exit(1)
 
     len_orig = len(tweets)
+
     # Add unique ID as suffix to timestamps (as strings), since in some special
-    # cases, there can be two different tweets which have the exact same timestamp.
+    # cases, there can be two different tweets which have the exact same
+    # timestamp in which case some tweets could get 'lost'
     tweets_as_date_dict = _sort_date_dict(
         {
             tweet['time'] + str(get_unique_id()): tweet
             for tweet in tweets
         }
     )
+
     tweets_sorted = list(tweets_as_date_dict.values())
+
     if len(tweets_sorted) != len_orig:
         logger.error(f"Some tweets went missing while sorting... Exit.")
         sys.exit(1)
+
     return tweets_sorted
 
 
@@ -418,7 +459,7 @@ def get_tweets(twitter_data, sort=True):
         logger.error("Failed to retrieve tweets... Exit.")
         sys.exit(1)
 
-    if sort:
+    if sort and len(tweets) > 1:
         tweets = _sort_tweets_by_date(tweets)
 
     return tweets
@@ -445,8 +486,8 @@ def filter_tweets(tweets, filter_kw):
     filtered_tweets = []
 
     for tweet in tweets:
-        hashtags = list(parse_filter_kw(ht)[1] for ht in tweet['entries']['hashtags'])
-        if parsed_kw in hashtags:
+        parsed_hashtags = list(parse_filter_kw(ht)[1] for ht in tweet['entries']['hashtags'])
+        if parsed_kw in parsed_hashtags:
             filtered_tweets.append(tweet)
             continue
         if not is_hashtag and parsed_kw in tweet['text'].lower():
@@ -454,6 +495,23 @@ def filter_tweets(tweets, filter_kw):
 
     logger.info(f"Found {len(filtered_tweets)} tweets for filter {filter_kw!r}...")
     return filtered_tweets
+
+
+def print_xl_sheet_header(sheet, headers, *, horizontal=True):
+    """
+    Add a highlighted header row or column to an Excel sheet
+
+    Args:
+        :sheet: (obj) Excel sheet reference
+        :headers: (list) headers to be printed
+        :horizontal: (bool) if True, row one will be filled, otherwise column 1
+    """
+
+    for i, header in enumerate(headers, start=1):
+        cell = sheet.cell(row=1, column=i) if horizontal else sheet.cell(row=i, column=1)
+        cell.value = header
+        cell.fill = XL_FILL_GREEN
+        cell.font = XL_FONT_BOLD
 
 
 def print_tweets_to_xl_sheet(sheet, tweets, username):
@@ -466,11 +524,7 @@ def print_tweets_to_xl_sheet(sheet, tweets, username):
     """
 
     headers = ["Time", "url", "isRetweet", "replies", "retweets", "likes", "hashtags", "text"]
-    for i, header in enumerate(headers, start=1):
-        cell = sheet.cell(row=1, column=i)
-        cell.value = header
-        cell.fill = XL_FILL_GREEN
-        cell.font = XL_FONT_BOLD
+    print_xl_sheet_header(sheet, headers)
 
     for i, tweet in enumerate(tweets, start=2):
         sheet.cell(row=i, column=1, value=tweet['time'])
@@ -494,14 +548,11 @@ def print_tweets_per_day_to_xl_sheet(sheet, twitter_data):
         :twitter_data: (dict) dictionary with twitter data
     """
 
-    for i, header in enumerate(["Day", "totTweets", "ownTweets"], start=1):
-        cell = sheet.cell(row=1, column=i)
-        cell.value = header
-        cell.fill = XL_FILL_GREEN
-        cell.font = XL_FONT_BOLD
+    headers = ["Day", "totTweets", "ownTweets"]
+    print_xl_sheet_header(sheet, headers)
 
     tweets_per_day = get_tweets_per_day(twitter_data)
-    # Only count tweets made by the own account (exclude any retweets)
+    # Only count tweets made by the own account (exclude retweets)
     tweets_per_day_own = get_tweets_per_day(twitter_data, include_retweet=False)
 
     for i, (day, num_tweets) in enumerate(tweets_per_day.items(), start=2):
@@ -520,58 +571,69 @@ def convert_to_excel(twitter_data, excel_file, filters):
         :filters: (list) list of filters
     """
 
-    title_raw_data = "Raw"
+    title_tweets = "Raw"
     title_activity = "Activity"
+    title_profile = "Profile"
 
     logger.info("Creating excel file...")
+
     tweets = get_tweets(twitter_data)
     username = twitter_data['profile'].get('username', None)
-
-    # ----- Tweet data (all) -----
     workbook = xl.Workbook()
+
+    # ----- Tweets (all) -----
     sheet = workbook.active
-    sheet.title = f"{title_raw_data} (all)"
+    sheet.title = f"{title_tweets} (all)"
     print_tweets_to_xl_sheet(sheet, tweets, username)
 
-    # ----- Twitter activity (all) -----
+    # ----- Activity (all) -----
     sheet = workbook.create_sheet(title=f"{title_activity} (all)")
     print_tweets_per_day_to_xl_sheet(sheet, twitter_data)
 
     # ----- User data -----
-    sheet = workbook.create_sheet(title="Account")
+    sheet = workbook.create_sheet(title=f"{title_profile}")
     profile = twitter_data['profile']
     headers = ["name", "username", "likes_count", "tweets_count", "followers_count", "following_count"]
+    print_xl_sheet_header(sheet, headers, horizontal=False)
     for i, header in enumerate(headers, start=1):
-        cell = sheet.cell(row=i, column=1)
-        cell.value = header
-        cell.fill = XL_FILL_GREEN
-        cell.font = XL_FONT_BOLD
         sheet.cell(row=i, column=2, value=profile.get(header, 'NONE'))
 
-    # ----- Filter tweet data by keywords or tweets -----
+    # ----- Filter tweets by keywords or hashtags -----
     if filters is not None:
         for filter_kw in filters:
             is_hashtag, parsed_kw = parse_filter_kw(filter_kw)
-            logger.info(f"Applying filter {filter_kw!r} (hashtag: {is_hashtag})...")
+            logger.info(f"Applying filter {'#' if is_hashtag else ''}{filter_kw!r} (hashtag: {is_hashtag})...")
 
-            # ----- Tweet data (filter) -----
-            sheet = workbook.create_sheet(f"{title_raw_data} (filter {'HT' if is_hashtag else 'KW'} {parsed_kw})")
+            # ----- Tweets (filter) -----
+            # Note: sheet title cannot have special characters (e.g. ', or #), otherwise silent failure
+            sheet = workbook.create_sheet(f"{title_tweets} (filter {'HT' if is_hashtag else 'KW'} {parsed_kw})")
             filtered_tweets = filter_tweets(tweets, filter_kw)
             print_tweets_to_xl_sheet(sheet, filtered_tweets, username)
 
-            # ----- Twitter activity (filter) -----
+            # ----- Activity (filter) -----
             sheet = workbook.create_sheet(f"{title_activity} (filter {'HT' if is_hashtag else 'KW'} {parsed_kw})")
-            print_tweets_per_day_to_xl_sheet(sheet, {'history': filtered_tweets})
+            print_tweets_per_day_to_xl_sheet(sheet, twitter_data={'history': filtered_tweets})
 
-    # ----- Save data... -----
+    # ----- Save Excel file -----
     logger.info(f"Saving data: {truncate_filepath(excel_file)}")
     workbook.save(excel_file)
 
 
 def parse_filter_kw(filter_kw):
+    """
+    Return a parsed filter keyword and boolean indicating if filter is a hashtag
+
+    Args:
+        :filter_kw: (str) filter keyword
+
+    Returns:
+        :is_hashtag: (bool) True, if 'filter_kw' is hashtag
+        :parsed_kw: (str) parsed 'filter_kw' (lowercase, without '#', ...)
+    """
+
     filter_kw = filter_kw.strip()
     is_hashtag = filter_kw.startswith('#')
-    parsed_kw = filter_kw.replace('#', '').replace("'", '').lower()
+    parsed_kw = parse_string(filter_kw, remove=('#', "'")).lower()
     return (is_hashtag, parsed_kw)
 
 
