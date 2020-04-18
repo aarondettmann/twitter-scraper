@@ -485,6 +485,31 @@ def print_tweets_to_xl_sheet(sheet, tweets, username):
         sheet.cell(row=i, column=8, value=tweet['text'])
 
 
+def print_tweets_per_day_to_xl_sheet(sheet, twitter_data):
+    """
+    Create an Excel sheet with tweet activity
+
+    Args:
+        :sheet: (obj) Excel sheet reference
+        :twitter_data: (dict) dictionary with twitter data
+    """
+
+    for i, header in enumerate(["Day", "totTweets", "ownTweets"], start=1):
+        cell = sheet.cell(row=1, column=i)
+        cell.value = header
+        cell.fill = XL_FILL_GREEN
+        cell.font = XL_FONT_BOLD
+
+    tweets_per_day = get_tweets_per_day(twitter_data)
+    # Only count tweets made by the own account (exclude any retweets)
+    tweets_per_day_own = get_tweets_per_day(twitter_data, include_retweet=False)
+
+    for i, (day, num_tweets) in enumerate(tweets_per_day.items(), start=2):
+        sheet.cell(row=i, column=1, value=day.strftime('%F'))
+        sheet.cell(row=i, column=2, value=num_tweets)
+        sheet.cell(row=i, column=3, value=tweets_per_day_own.get(day, 0))
+
+
 def convert_to_excel(twitter_data, excel_file, filters):
     """
     Convert a twitter data dictionary to a excel file
@@ -495,51 +520,48 @@ def convert_to_excel(twitter_data, excel_file, filters):
         :filters: (list) list of filters
     """
 
+    title_raw_data = "Raw"
+    title_activity = "Activity"
+
     logger.info("Creating excel file...")
     tweets = get_tweets(twitter_data)
     username = twitter_data['profile'].get('username', None)
 
-    # ----- Tweet data -----
+    # ----- Tweet data (all) -----
     workbook = xl.Workbook()
-    sheet1 = workbook.active
-    sheet1.title = "Twitter raw data"
-    print_tweets_to_xl_sheet(sheet1, tweets, username)
+    sheet = workbook.active
+    sheet.title = f"{title_raw_data} (all)"
+    print_tweets_to_xl_sheet(sheet, tweets, username)
 
-    # ----- Tweets per day -----
-    sheet2 = workbook.create_sheet(title="Twitter activity")
-    for i, header in enumerate(["Day", "totTweets", "ownTweets"], start=1):
-        cell = sheet2.cell(row=1, column=i)
-        cell.value = header
-        cell.fill = XL_FILL_GREEN
-        cell.font = XL_FONT_BOLD
-
-    tweets_per_day = get_tweets_per_day(twitter_data)
-    # Only count tweets made by the own account (exclude any retweets)
-    tweets_per_day_own = get_tweets_per_day(twitter_data, include_retweet=False)
-    for i, (day, num_tweets) in enumerate(tweets_per_day.items(), start=2):
-        sheet2.cell(row=i, column=1, value=day.strftime('%F'))
-        sheet2.cell(row=i, column=2, value=num_tweets)
-        sheet2.cell(row=i, column=3, value=tweets_per_day_own.get(day, 0))
+    # ----- Twitter activity (all) -----
+    sheet = workbook.create_sheet(title=f"{title_activity} (all)")
+    print_tweets_per_day_to_xl_sheet(sheet, twitter_data)
 
     # ----- User data -----
-    sheet3 = workbook.create_sheet(title="Account")
+    sheet = workbook.create_sheet(title="Account")
     profile = twitter_data['profile']
     headers = ["name", "username", "likes_count", "tweets_count", "followers_count", "following_count"]
     for i, header in enumerate(headers, start=1):
-        cell = sheet3.cell(row=i, column=1)
+        cell = sheet.cell(row=i, column=1)
         cell.value = header
         cell.fill = XL_FILL_GREEN
         cell.font = XL_FONT_BOLD
-        sheet3.cell(row=i, column=2, value=profile.get(header, 'NONE'))
+        sheet.cell(row=i, column=2, value=profile.get(header, 'NONE'))
 
     # ----- Filter tweet data by keywords or tweets -----
     if filters is not None:
         for filter_kw in filters:
             is_hashtag, parsed_kw = parse_filter_kw(filter_kw)
             logger.info(f"Applying filter {filter_kw!r} (hashtag: {is_hashtag})...")
-            sheet = workbook.create_sheet(f"Filter {'HT' if is_hashtag else 'KW'} {parsed_kw}")
+
+            # ----- Tweet data (filter) -----
+            sheet = workbook.create_sheet(f"{title_raw_data} (filter {'HT' if is_hashtag else 'KW'} {parsed_kw})")
             filtered_tweets = filter_tweets(tweets, filter_kw)
             print_tweets_to_xl_sheet(sheet, filtered_tweets, username)
+
+            # ----- Twitter activity (filter) -----
+            sheet = workbook.create_sheet(f"{title_activity} (filter {'HT' if is_hashtag else 'KW'} {parsed_kw})")
+            print_tweets_per_day_to_xl_sheet(sheet, {'history': filtered_tweets})
 
     # ----- Save data... -----
     logger.info(f"Saving data: {truncate_filepath(excel_file)}")
@@ -549,7 +571,7 @@ def convert_to_excel(twitter_data, excel_file, filters):
 def parse_filter_kw(filter_kw):
     filter_kw = filter_kw.strip()
     is_hashtag = filter_kw.startswith('#')
-    parsed_kw = filter_kw.replace('#', '').repace("'", '').lower()
+    parsed_kw = filter_kw.replace('#', '').replace("'", '').lower()
     return (is_hashtag, parsed_kw)
 
 
