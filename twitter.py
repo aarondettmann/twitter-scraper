@@ -147,21 +147,26 @@ def cli():
     parser = argparse.ArgumentParser(prog=f'{PROG_NAME}')
     subparsers = parser.add_subparsers(help='execution modes', dest='exec_mode')
 
+    # Filter argument applies to mode 'xl' and mode 'down'
+    filter_args = ['--filter', '-f']
+    filter_kwargs = {
+        'metavar': 'HASHTAGS or KEYWORDS',
+        'nargs': '+',
+        'type': str,
+        'help': 'filter tweets by #hashtag or keyword (text and hashtags)',
+    }
+
     # ----- Mode 'down' -----
     sub = subparsers.add_parser('down', help='download target twitter feed')
     sub.add_argument('usernames', metavar='NAMES', nargs='+', type=str, help='target twitter profile')
     sub.add_argument('--pages', '-p', metavar='PAGES', type=int, help='number of pages to fetch', default=200)
     sub.add_argument('--no-excel', action='store_true', help='do not convert data to exel file')
-    # TODO
-    sub.add_argument('--filter', '-f', metavar='HASHTAGS or KEYWORDS', nargs='+',
-                     type=str, help='filter tweets by #hashtag or keyword (text and hashtags)')
+    sub.add_argument(*filter_args, **filter_kwargs)
 
     # ----- Mode 'xl' -----
     sub = subparsers.add_parser('xl', help='convert data to excel spreadsheet')
     sub.add_argument("path", metavar='FILE or DIRECTORY', help="data to convert", type=str)
-    # TODO
-    sub.add_argument('--filter', '-f', metavar='HASHTAGS or KEYWORDS', nargs='+',
-                     type=str, help='filter tweets by #hashtag or keyword (text and hashtags)')
+    sub.add_argument(*filter_args, **filter_kwargs)
 
     args = parser.parse_args()
 
@@ -436,18 +441,18 @@ def filter_tweets(tweets, filter_kw):
           hashtags and the tweet text will be checked.
     """
 
-    is_hashtag = filter_kw.startswith('#')
-    filter_kw = filter_kw.replace('#', '').lower()
-
+    is_hashtag, parsed_kw = parse_filter_kw(filter_kw)
     filtered_tweets = []
+
     for tweet in tweets:
-        hashtags = list(ht.replace('#', '').lower() for ht in tweet['entries']['hashtags'])
-        if filter_kw in hashtags:
+        hashtags = list(parse_filter_kw(ht)[1] for ht in tweet['entries']['hashtags'])
+        if parsed_kw in hashtags:
             filtered_tweets.append(tweet)
             continue
-        if not is_hashtag and filter_kw in tweet['text'].lower():
+        if not is_hashtag and parsed_kw in tweet['text'].lower():
             filtered_tweets.append(tweet)
 
+    logger.info(f"Found {len(filtered_tweets)} tweets for filter {filter_kw!r}...")
     return filtered_tweets
 
 
@@ -530,15 +535,22 @@ def convert_to_excel(twitter_data, excel_file, filters):
     # ----- Filter tweet data by keywords or tweets -----
     if filters is not None:
         for filter_kw in filters:
-            logger.info(f"Applying filter {filter_kw!r}...")
-            # !!! bug!? worksheet empty if # of ' used!?
-            sheet = workbook.create_sheet(f"Filter -- {filter_kw.replace('#', '')}", 1)
+            is_hashtag, parsed_kw = parse_filter_kw(filter_kw)
+            logger.info(f"Applying filter {filter_kw!r} (hashtag: {is_hashtag})...")
+            sheet = workbook.create_sheet(f"Filter {'HT' if is_hashtag else 'KW'} {parsed_kw}")
             filtered_tweets = filter_tweets(tweets, filter_kw)
             print_tweets_to_xl_sheet(sheet, filtered_tweets, username)
 
     # ----- Save data... -----
     logger.info(f"Saving data: {truncate_filepath(excel_file)}")
     workbook.save(excel_file)
+
+
+def parse_filter_kw(filter_kw):
+    filter_kw = filter_kw.strip()
+    is_hashtag = filter_kw.startswith('#')
+    parsed_kw = filter_kw.replace('#', '').lower()
+    return (is_hashtag, parsed_kw)
 
 
 if __name__ == '__main__':
