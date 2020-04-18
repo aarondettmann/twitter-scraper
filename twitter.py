@@ -324,7 +324,7 @@ def get_tweets_per_day(twitter_data, count_zero_days=True, include_retweet=True)
         tweets_per_day[datetime.datetime(time.year, time.month, time.day)] += 1
 
     # Fill up the dictionary with zeros
-    if count_zero_days:
+    if count_zero_days and len(tweets_per_day) > 1:
         logger.info("Looking for days with zero tweets...")
 
         # Get start and end date
