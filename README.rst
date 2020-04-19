@@ -81,7 +81,8 @@ If you have followed the instructions above, you can now use the Twitter downloa
 
 A short help page will be shown indicating the available command line arguments that are available.
 
-**Download Twitter data**
+Download Twitter data
+^^^^^^^^^^^^^^^^^^^^^
 
 Use the ``down`` mode in order to download twitter data. After the ``down`` keyword, you need to specify the ``USERNAME`` (Twitter account name). Use the optional argument ``-p NUMBER`` to specify how many page you want to download. To retrieve older/more tweets, increase the number of pages. Example:
 
@@ -91,7 +92,8 @@ Use the ``down`` mode in order to download twitter data. After the ``down`` keyw
 
 Instead of a user name it is also possible to use a *hashtag*. Note that you might have to put the hashtag in quotation marks (e.g. ``python twitter.py down "#aviation" -p 10``).
 
-**Excel files**
+Excel files
+^^^^^^^^^^^
 
 When downloading Twitter data, it is by default saved as a JSON file and an Excel file (note that the JSON file may contain more information than the Excel file). In some cases it may be useful to manually convert a JSON file to Excel. In this case this can be achieved as shown in the following example.
 
@@ -100,3 +102,21 @@ When downloading Twitter data, it is by default saved as a JSON file and an Exce
     python twitter.py xl data/elonmusk_2020-04-01_1030/data.json
 
 This will generate an Excel file ``data/elonmusk_2020-04-01_1030/data.xlsx``.
+
+*Adding filters*
+
+When converting twitter data to Excel it is possible to add one or more filters. When adding a filter, additional sheets will be created in the Excel file. Filters can easily be added using the optional argument argument ``-f`` (or equivalently ``--filter``). In the following example four different filters are applied (*#Tesla*, *Tesla*, *SpaceX*, *dragon*).
+
+.. code::
+
+    python twitter.py down elonmusk -f '#Tesla' 'Tesla' 'SpaceX' 'dragon'
+
+Notice the first two filters (*#Tesla*, *Tesla*). These are not equivalent. The first filter starts with a *#* which indicates that tweets will be filtered by hashtags only. The rest of the tweet text is ignored. When omitting the *#* the filter will look at both at the text *and* hashtags. If the filter keyword appears in either, the tweet will be included in the filter results.
+
+Note that filter arguments are case-insensitive, so it does not matter if you type *TeSlA* or *tesla*. Both filter will yield the same result.
+
+If you have downloaded data already, you can create a new Excel file with the applied filters. Be ware that existing Excel files may be overwritten.
+
+.. code::
+
+    python twitter.py xl data/elonmusk_2020-04-01_1030/data.json -f 'SpaceX' '#dragon'
